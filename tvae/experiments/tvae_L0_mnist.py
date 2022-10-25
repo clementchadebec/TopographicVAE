@@ -44,7 +44,7 @@ def create_model(n_caps, cap_dim, group_size, mu_init, n_transforms):
 
 def main():
     config = {
-        'wandb_on': False,
+        'wandb_on': True,
         'lr': 1e-4,
         'momentum': 0.9,
         'batch_size': 8,
