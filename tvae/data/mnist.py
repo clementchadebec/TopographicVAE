@@ -11,6 +11,18 @@ def string_to_list(string):
     l = list(map(float, str(string).split(' ')))
     return l
 
+class DynBinarizedMNIST(torch.utils.data.Dataset):
+    def __init__(self, data):
+        self.data = data.type(torch.float)
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, index):
+        x = self.data[index]
+        #x = (x > torch.distributions.Uniform(0, 1).sample(x.shape).to(x.device)).float()
+        return x, 0
+
 
 class DuplicateTargets(object):
     def __init__(self, n_transforms):
@@ -108,15 +120,20 @@ class Preprocessor:
     def get_dataloaders(self, batch_size):
         data_train, data_val, data_test = self.load_datasets()
 
+        data_train = DynBinarizedMNIST(torch.load(os.path.join('/home/clement/Documents/TopographicVAE/tvae/data/train_12_long_color_mnist.pt')))#[:10000]
+        data_val = DynBinarizedMNIST(torch.load(os.path.join('/home/clement/Documents/TopographicVAE/tvae/data/val_12_long_color_mnist.pt')))#[:5000]
+        data_test = DynBinarizedMNIST(torch.load(os.path.join('/home/clement/Documents/TopographicVAE/tvae/data/test_12_long_color_mnist.pt')))#[:5000]
+
         kwargs = {'num_workers': 20, 'pin_memory': True} if torch.cuda.is_available() else {}
         train_loader = DataLoader(data_train, batch_size=batch_size, 
-                                       sampler=self.train_sampler,
+                                       #sampler=self.train_sampler,
                                        drop_last=True, **kwargs)
         val_loader = DataLoader(data_val, batch_size=batch_size, 
-                                     sampler=self.valid_sampler,
+                                     #sampler=self.valid_sampler,
                                      shuffle=False, drop_last=False, **kwargs)
         test_loader = DataLoader(data_test, batch_size=batch_size, 
                                       shuffle=False, drop_last=False, **kwargs)
+
 
         return train_loader, val_loader, test_loader
 

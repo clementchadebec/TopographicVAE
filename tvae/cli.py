@@ -7,7 +7,9 @@ from tvae.experiments import (
     tvae_Lpartial_rotcolor_mnist, tvae_Lpartial_perspective_mnist, 
     
     tvae_Lhalf_dsprites, tvae_Lpartial_dsprites, tvae_L0_dsprites,
-    tvae_Lshort_dsprites, nontvae_dsprites, bubbles_dsprites
+    tvae_Lshort_dsprites, nontvae_dsprites, bubbles_dsprites, tvae_Lhalf_colormnist,
+    tvae_Lhalf_sprites, tvae_Lpartial_sprites, nontvae_sprites, tvae_L0_sprites, tvae_Lshort_sprites,
+    tvae_L0_chairs, tvae_Lhalf_chairs, tvae_Lpartial_chairs, tvae_Lshort_chairs
 )
 
 parser = argparse.ArgumentParser(description='')

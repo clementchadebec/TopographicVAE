@@ -4,6 +4,7 @@ import wandb
 from tvae.utils.vis import plot_traversal_recon
 from tvae.containers.grouper import Chi_Squared_from_Gaussian_2d
 import torchvision
+import numpy as np
 
 class TVAE(torch.nn.Module):
     def __init__(self, z_encoder, u_encoder, decoder, grouper):
@@ -50,14 +51,18 @@ class TVAE(torch.nn.Module):
             u, kl_u, log_q_u, log_p_u = self.u_encoder(x)
             s = self.grouper(z, u)
             probs_x, neg_logpx_z = self.decoder(s, x)
+            #print(neg_logpx_z.shape, log_p_u.shape, log_q_u.shape, log_p_z.shape, log_q_z.shape, kl_u.shape)
             ll = (-1 * neg_logpx_z.flatten(start_dim=1).sum(-1, keepdim=True)
                   + log_p_z.flatten(start_dim=1).sum(-1, keepdim=True)
                   + log_p_u.flatten(start_dim=1).sum(-1, keepdim=True)
                   - log_q_z.flatten(start_dim=1).sum(-1, keepdim=True)
                   - log_q_u.flatten(start_dim=1).sum(-1, keepdim=True))
+            #print(-1 * neg_logpx_z.flatten(start_dim=1).sum(-1, keepdim=True).mean(), (log_p_z.flatten(start_dim=1).sum(-1, keepdim=True) - log_q_z.flatten(start_dim=1).sum(-1, keepdim=True)).mean(), kl_z.flatten(start_dim=1).sum(-1, keepdim=True).mean(), (log_p_u.flatten(start_dim=1).sum(-1, keepdim=True) - log_q_u.flatten(start_dim=1).sum(-1, keepdim=True)).mean(), kl_u.flatten(start_dim=1).sum(-1, keepdim=True).mean())
             log_likelihoods.append(ll)
         ll = torch.cat(log_likelihoods, dim=-1)
-        is_estimate = torch.logsumexp(ll, -1)
+        #print(-1 * neg_logpx_z.flatten(start_dim=1).sum(-1, keepdim=True).mean(), (log_p_z.flatten(start_dim=1).sum(-1, keepdim=True) - log_q_z.flatten(start_dim=1).sum(-1, keepdim=True)).mean(), kl_z.flatten(start_dim=1).sum(-1, keepdim=True).mean(), (log_p_u.flatten(start_dim=1).sum(-1, keepdim=True) - log_q_u.flatten(start_dim=1).sum(-1, keepdim=True)).mean(), kl_u.flatten(start_dim=1).sum(-1, keepdim=True).mean())
+        is_estimate = torch.logsumexp(ll, -1) - np.log(ll.shape[-1])
+        #print(is_estimate)
         return is_estimate
 
     def plot_samples(self, x, e, s_dir, n_samples=100, wandb_on=True):
@@ -82,15 +87,19 @@ class VAE(TVAE):
         log_likelihoods = []
 
         for n in range(n_samples):
+            #print(x.shape)
             z, kl_z, log_q_z, log_p_z = self.z_encoder(x)
+            #print(z.shape)
             s = self.grouper(z, torch.zeros_like(z))
+            #print(abs(z-s).sum())
             probs_x, neg_logpx_z = self.decoder(s, x)
             ll = (-1 * neg_logpx_z.flatten(start_dim=1).sum(-1, keepdim=True)
                   + log_p_z.flatten(start_dim=1).sum(-1, keepdim=True)
                   - log_q_z.flatten(start_dim=1).sum(-1, keepdim=True))
             log_likelihoods.append(ll)
         ll = torch.cat(log_likelihoods, dim=-1)
-        is_estimate = torch.logsumexp(ll, -1)
+        is_estimate = torch.logsumexp(ll, -1) - np.log(ll.shape[-1])
+        #print('is, ', log_p_z.flatten(start_dim=1).shape)
         return is_estimate
 
     def forward(self, x):

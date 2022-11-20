@@ -17,12 +17,12 @@ from tvae.utils.train_loops import train_epoch, eval_epoch
 def create_model(n_caps, cap_dim, n_transforms):
     s_dim = n_caps * cap_dim
     group_kernel = (1,1,1)
-    z_encoder = Gaussian_Encoder(MLP_Encoder(s_dim=s_dim, n_cin=3, n_hw=28),
+    z_encoder = Gaussian_Encoder(MLP_Encoder(s_dim=s_dim, n_cin=3, n_hw=64),
                                  loc=0.0, scale=1.0)
 
     u_encoder = None
 
-    decoder = Bernoulli_Decoder(MLP_Decoder(s_dim=s_dim, n_cout=3, n_hw=28))
+    decoder = Bernoulli_Decoder(MLP_Decoder(s_dim=s_dim, n_cout=3, n_hw=64))
 
     grouper = NonTopographic_Capsules1d(
                       nn.ConvTranspose3d(in_channels=1, out_channels=1,

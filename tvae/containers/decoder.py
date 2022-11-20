@@ -1,8 +1,12 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+import numpy as np
+
 from torch.distributions.bernoulli import Bernoulli
 from torch.distributions.normal import Normal
 from tvae.utils.vis import plot_filters
+import numpy as np
 
 class Decoder(nn.Module):
     def __init__(self, model):
@@ -41,8 +45,17 @@ class Gaussian_Decoder(Decoder):
 
     def forward(self, z, x):
         mu_x = self.model(z)
-        p = Normal(loc=mu_x, scale=self.scale)
+        p = Normal(loc=mu_x, scale=self.scale.to(z.device))
         neg_logpx_z = -1 * p.log_prob(x)
+        #neg_logpx_z = (
+        #        (
+        #            F.mse_loss(
+        #                mu_x.reshape(-1, np.prod(self.model.output_dim)),
+        #                x.reshape(-1, np.prod(self.model.output_dim)),
+        #                reduction="none"
+        #            )
+        #        ).sum(dim=-1).reshape(x.shape[0], -1)
+        #    ).mean(dim=-1)
 
         return mu_x, neg_logpx_z
 

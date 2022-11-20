@@ -1,0 +1,7 @@
+*.pyc
+data
+*.png
+wandb
+*.egg-info
+*.npz
+tvae/utils/MNIST

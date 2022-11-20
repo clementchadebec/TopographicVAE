@@ -38,9 +38,9 @@ class AddRandomTransformationDims(object):
 
         x_expanded = x.new_zeros((x.shape[0], len(self.angle_set), 1, 1, c, h, w))
 
-        start_angle = torch.randint(len(self.angle_set), (1,))
-        start_scale = torch.randint(len(self.scale_set), (1,))
-        start_color = torch.randint(len(self.color_set), (1,))
+        start_angle = 0#torch.randint(len(self.angle_set), (1,))
+        start_scale = 0#torch.randint(len(self.scale_set), (1,))
+        start_color = 0#torch.randint(len(self.color_set), (1,))
 
         self.angle_set = self.angle_set[start_angle:] + self.angle_set[:start_angle]
         self.scale_set = self.scale_set[start_scale:] + self.scale_set[:start_scale]
@@ -55,13 +55,13 @@ class AddRandomTransformationDims(object):
             color_set = [self.color_set[color_idx]]
             angle_set = self.angle_set
         elif transform_type == 1:
-            angle_idx = torch.randint(0, len(self.angle_set), (1,))
+            angle_idx = 0#torch.randint(0, len(self.angle_set), (1,))
             color_idx = torch.randint(0, len(self.color_set), (1,))
             angle_set = [self.angle_set[angle_idx]]
             color_set = [self.color_set[color_idx]]
             scale_set = self.scale_set
         elif transform_type == 2:
-            angle_idx = torch.randint(0, len(self.angle_set), (1,))
+            angle_idx = 0#torch.randint(0, len(self.angle_set), (1,))
             scale_idx = torch.randint(0, len(self.scale_set), (1,))
             angle_set = [self.angle_set[angle_idx]]
             scale_set = [self.scale_set[scale_idx]]

@@ -4,6 +4,7 @@ from tvae.utils.vis import plot_recon, Plot_MaxActImg, Plot_ClassActMap
 from tvae.utils.correlations import Plot_Covariance_Matrix
 from tvae.utils.losses import all_pairs_equivariance_loss, get_cap_offsets
 import numpy as np
+from tqdm.auto import tqdm
 
 def train_epoch(model, optimizer, train_loader, log, savepath, epoch, eval_batches=300,
                 plot_weights=False, plot_fullcaptrav=False, plot_samples=False, wandb_on=True):
@@ -14,12 +15,15 @@ def train_epoch(model, optimizer, train_loader, log, savepath, epoch, eval_batch
     num_batches = 0
 
     model.train()
-    for x, label in train_loader:
+    for x, label in tqdm(train_loader):
         optimizer.zero_grad()
         x = x.float().to('cuda')
+        #print(f'N datra {i*x.shape[0]}')
 
         x_batched = x.view(-1, *x.shape[-3:])  # batch transforms
+
         z, u, s, probs_x, kl_z, kl_u, neg_logpx_z = model(x_batched)
+
 
         avg_KLD = (kl_z.sum() + kl_u.sum()) / x_batched.shape[0]
         avg_neg_logpx_z = neg_logpx_z.sum() / x_batched.shape[0]
@@ -39,39 +43,73 @@ def train_epoch(model, optimizer, train_loader, log, savepath, epoch, eval_batch
         num_batches += 1
         b_idx = epoch * len(train_loader) + num_batches
 
-        if b_idx % eval_batches == 0:
-            log('Train Total Loss', loss)
-            log('Train -LogP(x|z)', avg_neg_logpx_z)
-            log('Train KLD', avg_KLD)
-            log('Eq Loss', eq_loss)
-
-            if plot_weights:
-                model.plot_decoder_weights(wandb_on=wandb_on)
-                model.plot_encoder_weights(wandb_on=wandb_on)
-
-            Plot_Covariance_Matrix(s**2.0, s**2.0, name='Covariance_S**2_batch', wandb_on=wandb_on)
-
-            if plot_fullcaptrav:
-                model.plot_capsule_traversal(x_batched.detach(), 
-                                             os.path.join(savepath, 'samples'),
-                                             b_idx, wandb_on=wandb_on,
-                                             name='Cap_Traversal_Train')
-            if plot_samples:
-                model.plot_samples(x_batched, b_idx, os.path.join(savepath, 'samples'),
-                                   n_samples=100, wandb_on=wandb_on)
-
-            plot_recon(x_batched, 
-                       probs_x.view(x_batched.shape), 
-                       os.path.join(savepath, 'samples'),
-                       b_idx, wandb_on=wandb_on)
-
+#        if b_idx % eval_batches == 0:
+#            log('Train Total Loss', loss)
+#            log('Train -LogP(x|z)', avg_neg_logpx_z)
+#            log('Train KLD', avg_KLD)
+#            log('Eq Loss', eq_loss)
+#
+#            if plot_weights:
+#                model.plot_decoder_weights(wandb_on=wandb_on)
+#                model.plot_encoder_weights(wandb_on=wandb_on)
+#
+#            Plot_Covariance_Matrix(s**2.0, s**2.0, name='Covariance_S**2_batch', wandb_on=wandb_on)
+#
+#            if plot_fullcaptrav:
+#                model.plot_capsule_traversal(x_batched.detach(), 
+#                                             os.path.join(savepath, 'samples'),
+#                                             b_idx, wandb_on=wandb_on,
+#                                             name='Cap_Traversal_Train')
+#            if plot_samples:
+#                model.plot_samples(x_batched, b_idx, os.path.join(savepath, 'samples'),
+#                                   n_samples=100, wandb_on=wandb_on)
+#
+#            plot_recon(x_batched, 
+#                       probs_x.view(x_batched.shape), 
+#                       os.path.join(savepath, 'samples'),
+#                       b_idx, wandb_on=wandb_on)
+#
     return total_loss, total_neg_logpx_z, total_kl, total_eq_loss, num_batches
 
+def validate_epoch(model, val_loader, epoch):
+    total_loss = 0
+    total_kl = 0
+    total_neg_logpx_z = 0
+    total_eq_loss = 0.0
+    num_batches = 0
+
+    model.eval()
+    with torch.no_grad():
+        for x, label in tqdm(val_loader):
+            x = x.float().to('cuda')
+            #print(f'N datra {i*x.shape[0]}')
+
+            x_batched = x.view(-1, *x.shape[-3:])  # batch transforms
+
+            z, u, s, probs_x, kl_z, kl_u, neg_logpx_z = model(x_batched)
+
+
+            avg_KLD = (kl_z.sum() + kl_u.sum()) / x_batched.shape[0]
+            avg_neg_logpx_z = neg_logpx_z.sum() / x_batched.shape[0]
+            loss = avg_neg_logpx_z + avg_KLD
+
+            eq_loss = all_pairs_equivariance_loss(s.detach(), bsz=x.shape[0], 
+                                                  seq_len=x.shape[1], n_caps=model.grouper.n_caps,
+                                                  cap_dim=model.grouper.cap_dim)
+
+            total_loss += loss
+            total_neg_logpx_z += avg_neg_logpx_z
+            total_kl += avg_KLD
+            total_eq_loss += eq_loss
+            num_batches += 1
+            b_idx = epoch * len(val_loader) + num_batches
+
+    return total_loss, total_neg_logpx_z, total_kl, total_eq_loss, num_batches
 
 def eval_epoch(model, val_loader, log, savepath, epoch, n_is_samples=100, 
                plot_maxact=False, plot_class_selectivity=False, 
                plot_cov=False, plot_fullcaptrav=True, wandb_on=True,
-               cap_trav_batches=100):
+               cap_trav_batches=20):
     total_loss = 0
     total_kl = 0
     total_neg_logpx_z = 0
@@ -84,14 +122,14 @@ def eval_epoch(model, val_loader, log, savepath, epoch, n_is_samples=100,
 
     model.eval()
     with torch.no_grad():
-        for x, label in val_loader:
+        for x, label in tqdm(val_loader):
             x = x.float().to('cuda')
 
             x_batched = x.view(-1, *x.shape[-3:])  # batch transforms
+
             z, u, s, probs_x, kl_z, kl_u, neg_logpx_z = model(x_batched)
             avg_KLD = (kl_z.sum() + kl_u.sum()) / x_batched.shape[0]
             avg_neg_logpx_z = neg_logpx_z.sum() / x_batched.shape[0]
-
             eq_loss = all_pairs_equivariance_loss(s, bsz=x.shape[0], seq_len=x.shape[1], 
                                                   n_caps=model.grouper.n_caps, cap_dim=model.grouper.cap_dim)
 
@@ -104,7 +142,7 @@ def eval_epoch(model, val_loader, log, savepath, epoch, n_is_samples=100,
             total_neg_logpx_z += avg_neg_logpx_z
             total_kl += avg_KLD
             total_eq_loss += eq_loss
-
+            #print("shape", x_batched.shape[0])
             is_estimate = model.get_IS_estimate(x_batched, n_samples=n_is_samples)
             total_is_estimate += is_estimate.sum() / x_batched.shape[0]
 
