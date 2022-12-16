@@ -7,14 +7,14 @@ from torch.nn import functional as F
 from copy import deepcopy
 import numpy as np
 
-from tvae.data.mnist import Preprocessor
+from tvae.data.dsprites import get_dataloader
 from tvae.containers.tvae import TVAE
-from tvae.models.mlp import Encoder_ColorMNIST, Decoder_ColorMNIST
+from tvae.models.mlp import Encoder_Chairs, Decoder_Chairs
 from tvae.containers.encoder import Gaussian_Encoder
 from tvae.containers.decoder import Bernoulli_Decoder, Gaussian_Decoder
-from tvae.containers.grouper import Chi_Squared_Capsules_from_Gaussian_1d
+from tvae.containers.grouper import Stationary_Capsules_1d
 from tvae.utils.logging import configure_logging, get_dirs
-from tvae.utils.train_loops_with_missing import train_epoch, eval_epoch, validate_epoch
+from tvae.utils.train_loops_with_missing import train_epoch, validate_epoch, eval_epoch
 
 from .utils import make_batched_masks
 
@@ -35,74 +35,73 @@ class My_MaskedDataset(torch.utils.data.Dataset):
         #x = (x > torch.distributions.Uniform(0, 1).sample(x.shape).to(x.device)).float()
         return {'data': x, 'seq_mask': seq_m, 'pix_mask': pix_m}, 0
 
-def create_model(n_caps, cap_dim, mu_init, n_transforms, group_kernel, n_off_diag):
+def create_model(n_caps, cap_dim, mu_init, n_transforms, k_time, k_space):
     s_dim = n_caps * cap_dim
-    z_encoder = Gaussian_Encoder(Encoder_ColorMNIST(s_dim=s_dim, n_cin=1, n_hw=28),
+    group_kernel = (k_time, k_space, 1)
+    z_encoder = Gaussian_Encoder(Encoder_Chairs(s_dim=s_dim, n_cin=3, n_hw=64),
                                  loc=0.0, scale=1.0)
 
-    u_encoder = Gaussian_Encoder(Encoder_ColorMNIST(s_dim=s_dim, n_cin=1, n_hw=28),                                
+    u_encoder = Gaussian_Encoder(Encoder_Chairs(s_dim=s_dim, n_cin=3, n_hw=64),                                
                                  loc=0.0, scale=1.0)
 
-    decoder = Gaussian_Decoder(Decoder_ColorMNIST(s_dim=s_dim, n_cout=1, n_hw=28))
+    decoder = Gaussian_Decoder(Decoder_Chairs(s_dim=s_dim, n_cout=3, n_hw=64))
 
-    grouper = Chi_Squared_Capsules_from_Gaussian_1d(
+    pad_fix_0 = (group_kernel[0]+1) % 2
+    pad_fix_1 = (group_kernel[1]+1) % 2
+    grouper = Stationary_Capsules_1d(
                       nn.ConvTranspose3d(in_channels=1, out_channels=1,
                                           kernel_size=group_kernel, 
-                                          padding=(2*(group_kernel[0] // 2)-1, 
-                                                   2*(group_kernel[1] // 2)-1,
+                                          padding=(2*(group_kernel[0] // 2)-pad_fix_0, 
+                                                   2*(group_kernel[1] // 2)-pad_fix_1,
                                                    2*(group_kernel[2] // 2)),
                                           stride=(1,1,1), padding_mode='zeros', bias=False),
                       lambda x: F.pad(x, (group_kernel[2] // 2, group_kernel[2] // 2,
-                                          group_kernel[1] // 2-1, group_kernel[1] // 2,
-                                          group_kernel[0] // 2-1, group_kernel[0] // 2), 
+                                          group_kernel[1] // 2-pad_fix_1, group_kernel[1] // 2,
+                                          group_kernel[0] // 2-pad_fix_0, group_kernel[0] // 2), 
                                           mode='circular'),
                     n_caps=n_caps, cap_dim=cap_dim, n_transforms=n_transforms,
-                    mu_init=mu_init, n_off_diag=n_off_diag)
+                    mu_init=mu_init)
+
     
     return TVAE(z_encoder, u_encoder, decoder, grouper)
 
 
 def main(args):
     config = {
-        'wandb_on': False,
+        'wandb_on': True,
         'lr': 1e-3,
         #'momentum': 0.9,
-        'batch_size': 128,
-        'max_epochs': 20,
-        'eval_epochs': 20,
-        #'dataset': 'MNIST',
-        #'train_angle_set': '0 20 40 60 80 100 120 140 160 180 200 220 240 260 280 300 320 340',
-        #'test_angle_set': '0 20 40 60 80 100 120 140 160 180 200 220 240 260 280 300 320 340', 
-        #'train_color_set': '0 20 40 60 80 100 120 140 160 180 200 220 240 260 280 300 320 340',
-        #'test_color_set': '0 20 40 60 80 100 120 140 160 180 200 220 240 260 280 300 320 340',
-        #'train_scale_set': '0.60 0.64 0.68 0.72 0.76 0.79 0.83 0.87 0.91 0.95 0.99 1.03 1.07 1.11 1.14 1.18 1.22 1.26',
-        #'test_scale_set': '0.60 0.64 0.68 0.72 0.76 0.79 0.83 0.87 0.91 0.95 0.99 1.03 1.07 1.11 1.14 1.18 1.22 1.26',
-        #'pct_val': 0.2,
-        #'random_crop': 28,
+        'batch_size': 64,
+        'max_epochs': 200,
+        'eval_epochs': 200,
+        #'dataset': 'DSprites',
+        #'seq_transforms': ['posX', 'posY', 'orientation', 'scale'],
+        #'avail_transforms': ['posX', 'posY', 'orientation', 'scale', 'shape'],
         'seed': 1,
         'n_caps': 8,
         'cap_dim': 16,
         'n_transforms': 8,
+        'max_transform_len': 30,
         'mu_init': 30.0,
-        'n_off_diag': 1,
-        'group_kernel': (8, 8, 1),
+        'k_time': 4,
+        'k_space': 5,
         'n_is_samples': 100,
         "prob_missing_data": args.prob_missing_data,
         "prob_missing_pixels": args.prob_missing_pixels
         }
 
-    name = f'TVAE_ROTMNIST_L=1/2_K=3_pix_{config["prob_missing_pixels"]}_data_{config["prob_missing_data"]}'
+    name = f'Bubbles_Sprites_L=1/4_K=5_pix_{config["prob_missing_pixels"]}_data_{config["prob_missing_data"]}'
 
     config['savedir'], config['data_dir'], config['wandb_dir'] = get_dirs()
 
     savepath = os.path.join(config['savedir'], name)
 
 
-    ####################### Load data #######################
+     ####################### Load data #######################
 
-    train_data = torch.load(os.path.join('/home/clement/Documents/rvae/benchmark_VAE/examples/data/rotated_mnist/train_mnist_rotated_8_torch_131.pt'), map_location="cpu")[:-1000]
-    eval_data = torch.load(os.path.join('/home/clement/Documents/rvae/benchmark_VAE/examples/data/rotated_mnist/train_mnist_rotated_8_torch_131.pt'), map_location="cpu")[-1000:]
-    test_data = torch.load(os.path.join('/home/clement/Documents/rvae/benchmark_VAE/examples/data/rotated_mnist/test_mnist_rotated_8_torch_131.pt'), map_location="cpu")
+    train_data = torch.load(os.path.join('/home/clement/Documents/rvae/benchmark_VAE/examples/data/sprites/Sprites_train_torch_131.pt'), map_location="cpu")['data'][:-1000]
+    eval_data = torch.load(os.path.join('/home/clement/Documents/rvae/benchmark_VAE/examples/data/sprites/Sprites_train_torch_131.pt'), map_location="cpu")['data'][-1000:]
+    test_data = torch.load(os.path.join('/home/clement/Documents/rvae/benchmark_VAE/examples/data/sprites/Sprites_test_torch_131.pt'), map_location="cpu")['data']
 
     if config["prob_missing_data"] > 0.:
         train_seq_mask = make_batched_masks(train_data, config["prob_missing_data"], config["batch_size"]).type(torch.bool)
@@ -133,21 +132,6 @@ def main(args):
     data_val = My_MaskedDataset(eval_data, eval_seq_mask, eval_pix_mask)
     data_test = My_MaskedDataset(test_data, test_seq_mask, test_pix_mask)
 
-
-    print("Successfully loaded data !\n")
-    print("------------------------------------------------------------")
-    print("Dataset \t \t Shape \t \t \t Range")
-    print(
-        f" train data: \t {train_data.shape} \t [{train_data.min()}-{train_data.max()}] "
-    )
-    print(
-        f" eval data: \t {eval_data.shape} \t [{eval_data.min()}-{eval_data.max()}]"
-    )
-    print(
-        f" test data: \t {test_data.shape} \t [{test_data.min()}-{test_data.max()}]"
-    )
-    print("------------------------------------------------------------\n")
-
     #kwargs = {'num_workers': 1, 'pin_memory': True} if torch.cuda.is_available() else {}
     train_loader = torch.utils.data.DataLoader(data_train, batch_size=config['batch_size'], 
                                 #sampler=self.train_sampler,
@@ -164,27 +148,24 @@ def main(args):
                                 )
 
     model = create_model(n_caps=config['n_caps'], cap_dim=config['cap_dim'], mu_init=config['mu_init'], 
-                         n_transforms=config['n_transforms'], group_kernel=config['group_kernel'], n_off_diag=config['n_off_diag'])
+                         n_transforms=config['n_transforms'], k_time=config['k_time'], k_space=config['k_space'])
     model.to('cuda')
-    
-    print(model, config)
 
     log, checkpoint_path = configure_logging(config, name, model)
-    # load_checkpoint_path = ''
-    # model.load_state_dict(torch.load(load_checkpoint_path))
+    # model.load_state_dict(torch.load(checkpoint_path))
 
     optimizer = optim.Adam(model.parameters(), 
                            lr=config['lr'],
                            eps=1e-4)
     scheduler = torch.optim.lr_scheduler.MultiStepLR(
             optimizer,
-            milestones=[50, 75, 100, 125, 150],
-            gamma=10**(-1/4),
+            milestones=[50, 100, 125, 150],
+            gamma=0.5,
             #verbose=True
         )
 
     best_total_loss = 100000000000
-    best_model = None
+    best_model = deepcopy(model)
 
     for e in range(1, config['max_epochs']+1):
         log('Epoch', e)
@@ -195,7 +176,6 @@ def main(args):
                                                                      plot_weights=False,
                                                                      plot_fullcaptrav=True,
                                                                      wandb_on=config['wandb_on'])
-
         total_val_loss, _, _, _, _ = validate_epoch(model=model, val_loader=val_loader, epoch=e)
 
         if total_val_loss < best_total_loss:
@@ -208,7 +188,7 @@ def main(args):
         log("Epoch Avg KL", total_kl / num_batches)
         log("Epoch Avg EQ Loss", total_eq_loss / num_batches)
         scheduler.step()
-        
+
         torch.save(model.state_dict(), checkpoint_path)
 
         recon = []
@@ -232,7 +212,7 @@ def main(args):
             #log("mean IS Estimate", np.mean(nll))
             #log("std IS Estimate", np.std(nll))
             log("mean recon loss: ", np.mean(recon))
-            log("std recon loss: ", np.std(recon))
+            log("std recon loss: ", np.std(recon))y
 
 if __name__ == '__main__':
     main()

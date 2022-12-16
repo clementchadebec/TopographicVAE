@@ -37,7 +37,7 @@ def train_epoch(model, optimizer, train_loader, log, savepath, epoch, eval_batch
         # Masked loss
         kl_u = kl_u * seq_mask.reshape(x_batched.shape[0], 1, 1, 1)
         kl_z = kl_z * seq_mask.reshape(x_batched.shape[0], 1, 1, 1)
-        neg_logpx_z = neg_logpx_z * pix_mask.reshape_as(x_batched)
+        neg_logpx_z = neg_logpx_z * pix_mask.reshape_as(x_batched) * seq_mask.reshape(x_batched.shape[0], 1, 1, 1)
 
         avg_KLD = (kl_z.sum() + kl_u.sum()) / x_batched.shape[0]
         avg_neg_logpx_z = neg_logpx_z.sum() / x_batched.shape[0]
@@ -112,13 +112,9 @@ def validate_epoch(model, val_loader, epoch):
 
             z, u, s, probs_x, kl_z, kl_u, neg_logpx_z = model(x_batched)
 
-            if seq_mask is not None:
-                kl_u = kl_u * seq_mask.reshape(x_batched.shape[0], 1, 1, 1)
-                kl_z = kl_z * seq_mask.reshape(x_batched.shape[0], 1, 1, 1)
-        
-            if pix_mask is not None:    
-                neg_logpx_z = neg_logpx_z * pix_mask.reshape_as(x_batched)
-
+            kl_u = kl_u * seq_mask.reshape(x_batched.shape[0], 1, 1, 1)
+            kl_z = kl_z * seq_mask.reshape(x_batched.shape[0], 1, 1, 1)  
+            neg_logpx_z = neg_logpx_z * pix_mask.reshape_as(x_batched) * seq_mask.reshape(x_batched.shape[0], 1, 1, 1)
 
             avg_KLD = (kl_z.sum() + kl_u.sum()) / x_batched.shape[0]
             avg_neg_logpx_z = neg_logpx_z.sum() / x_batched.shape[0]
