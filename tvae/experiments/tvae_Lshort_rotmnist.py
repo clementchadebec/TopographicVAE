@@ -9,7 +9,7 @@ import numpy as np
 
 from tvae.data.mnist import Preprocessor
 from tvae.containers.tvae import TVAE
-from tvae.models.mlp import Encoder_Chairs, Decoder_Chairs
+from tvae.models.mlp import Encoder_ColorMNIST, Decoder_ColorMNIST
 from tvae.containers.encoder import Gaussian_Encoder
 from tvae.containers.decoder import Bernoulli_Decoder, Gaussian_Decoder
 from tvae.containers.grouper import Chi_Squared_Capsules_from_Gaussian_1d
@@ -30,13 +30,13 @@ class DynBinarizedMNIST(torch.utils.data.Dataset):
 
 def create_model(n_caps, cap_dim, mu_init, n_transforms, group_kernel, n_off_diag):
     s_dim = n_caps * cap_dim
-    z_encoder = Gaussian_Encoder(Encoder_Chairs(s_dim=s_dim, n_cin=3, n_hw=64),
+    z_encoder = Gaussian_Encoder(Encoder_ColorMNIST(s_dim=s_dim, n_cin=1, n_hw=28),
                                  loc=0.0, scale=1.0)
 
-    u_encoder = Gaussian_Encoder(Encoder_Chairs(s_dim=s_dim, n_cin=3, n_hw=64),                                
+    u_encoder = Gaussian_Encoder(Encoder_ColorMNIST(s_dim=s_dim, n_cin=1, n_hw=28),                                
                                  loc=0.0, scale=1.0)
 
-    decoder = Gaussian_Decoder(Decoder_Chairs(s_dim=s_dim, n_cout=3, n_hw=64))
+    decoder = Gaussian_Decoder(Decoder_ColorMNIST(s_dim=s_dim, n_cout=1, n_hw=28))
 
     grouper = Chi_Squared_Capsules_from_Gaussian_1d(
                       nn.ConvTranspose3d(in_channels=1, out_channels=1,
@@ -60,7 +60,7 @@ def main():
         'wandb_on': True,
         'lr': 1e-3,
         #'momentum': 0.9,
-        'batch_size': 64,
+        'batch_size': 128,
         'max_epochs': 200,
         'eval_epochs': 200,
         #'dataset': 'MNIST',
@@ -78,11 +78,11 @@ def main():
         'n_transforms': 8,
         'mu_init': 30.0,
         'n_off_diag': 1,
-        'group_kernel': (8, 8, 1),
+        'group_kernel': (2, 2, 1),
         'n_is_samples': 100
         }
 
-    name = 'TVAE_SPRITES_L=1/2_K=3'
+    name = 'TVAE_ROTMNIST_L=1/8_K=3'
 
     config['savedir'], config['data_dir'], config['wandb_dir'] = get_dirs()
 
@@ -90,9 +90,9 @@ def main():
     #preprocessor = Preprocessor(config)
     #train_loader, val_loader, test_loader = preprocessor.get_dataloaders(batch_size=config['batch_size'])
 
-    data_train = DynBinarizedMNIST(torch.load(os.path.join('/home/clement/Documents/rvae/benchmark_VAE/examples/data/sprites/Sprites_train_torch_131.pt'), map_location="cpu")['data'][:-1000])#[:10000]
-    data_val = DynBinarizedMNIST(torch.load(os.path.join('/home/clement/Documents/rvae/benchmark_VAE/examples/data/sprites/Sprites_train_torch_131.pt'), map_location="cpu")['data'][-1000:])#[:5000]
-    data_test = DynBinarizedMNIST(torch.load(os.path.join('/home/clement/Documents/rvae/benchmark_VAE/examples/data/sprites/Sprites_test_torch_131.pt'), map_location="cpu")['data'])
+    data_train = DynBinarizedMNIST(torch.load(os.path.join('/home/clement/Documents/rvae/benchmark_VAE/examples/data/rotated_mnist/train_mnist_rotated_8_torch_131.pt'), map_location="cpu")[:-1000])#[:10000]
+    data_val = DynBinarizedMNIST(torch.load(os.path.join('/home/clement/Documents/rvae/benchmark_VAE/examples/data/rotated_mnist/train_mnist_rotated_8_torch_131.pt'), map_location="cpu")[-1000:])#[:5000]
+    data_test = DynBinarizedMNIST(torch.load(os.path.join('/home/clement/Documents/rvae/benchmark_VAE/examples/data/rotated_mnist/test_mnist_rotated_8_torch_131.pt'), map_location="cpu"))
 
     #kwargs = {'num_workers': 1, 'pin_memory': True} if torch.cuda.is_available() else {}
     train_loader = torch.utils.data.DataLoader(data_train, batch_size=config['batch_size'], 
@@ -124,8 +124,8 @@ def main():
                            eps=1e-4)
     scheduler = torch.optim.lr_scheduler.MultiStepLR(
             optimizer,
-            milestones=[50, 100, 125, 150],
-            gamma=0.5,
+            milestones=[50, 75, 100, 125, 150],
+            gamma=10**(-1/4),
             #verbose=True
         )
 
@@ -176,7 +176,6 @@ def main():
 
             log("mean IS Estimate", np.mean(nll))
             log("std IS Estimate", np.std(nll))
-
 
 if __name__ == '__main__':
     main()

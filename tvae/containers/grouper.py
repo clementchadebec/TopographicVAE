@@ -112,7 +112,6 @@ class Stationary_Capsules_1d(Grouper):
         v = self.model(u_caps_padded).squeeze(1)
         v = v.view(-1, self.n_caps, self.n_t, self.cap_dim, h*w)
         v = v.permute((0, 2, 1, 3, 4)) # (bsz, t, n_caps, capdim, h*w)
-
         v = v.reshape(z.shape)
         std = 1.0 / torch.sqrt(v + self.eps)
         s = (z + self.correlated_mean_beta) * std

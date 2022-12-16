@@ -15,7 +15,7 @@ def configure_logging(config, name, model):
         import wandb
 
         wandb.init(name=name,
-                   project='topographic_vae', 
+                   project='topographic_vae_nll_compute', 
                    entity='clementchadebec', 
                    dir=config['wandb_dir'],
                    config=config)

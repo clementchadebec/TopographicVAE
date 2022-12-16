@@ -5,9 +5,10 @@ from tvae.utils.correlations import Plot_Covariance_Matrix
 from tvae.utils.losses import all_pairs_equivariance_loss, get_cap_offsets
 import numpy as np
 from tqdm.auto import tqdm
+import torch.nn.functional as F
 
 def train_epoch(model, optimizer, train_loader, log, savepath, epoch, eval_batches=300,
-                plot_weights=False, plot_fullcaptrav=False, plot_samples=False, wandb_on=True):
+                plot_weights=False, plot_fullcaptrav=False, plot_samples=False, wandb_on=True, pix_mask=None, seq_mask=None):
     total_loss = 0
     total_kl = 0
     total_neg_logpx_z = 0
@@ -15,15 +16,28 @@ def train_epoch(model, optimizer, train_loader, log, savepath, epoch, eval_batch
     num_batches = 0
 
     model.train()
-    for x, label in tqdm(train_loader):
+    for inputs, label in tqdm(train_loader):
+
+        x = inputs['data']
+        seq_mask = inputs['seq_mask']
+        pix_mask = inputs['pix_mask']
+
         optimizer.zero_grad()
         x = x.float().to('cuda')
+        seq_mask = seq_mask.to('cuda')
+        pix_mask = pix_mask.to('cuda')
+
+        x = x * pix_mask * seq_mask.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
+
         #print(f'N datra {i*x.shape[0]}')
 
         x_batched = x.view(-1, *x.shape[-3:])  # batch transforms
-
         z, u, s, probs_x, kl_z, kl_u, neg_logpx_z = model(x_batched)
 
+        # Masked loss
+        kl_u = kl_u * seq_mask.reshape(x_batched.shape[0], 1, 1, 1)
+        kl_z = kl_z * seq_mask.reshape(x_batched.shape[0], 1, 1, 1)
+        neg_logpx_z = neg_logpx_z * pix_mask.reshape_as(x_batched)
 
         avg_KLD = (kl_z.sum() + kl_u.sum()) / x_batched.shape[0]
         avg_neg_logpx_z = neg_logpx_z.sum() / x_batched.shape[0]
@@ -80,13 +94,30 @@ def validate_epoch(model, val_loader, epoch):
 
     model.eval()
     with torch.no_grad():
-        for x, label in tqdm(val_loader):
+        for inputs, label in tqdm(val_loader):
+
+            x = inputs['data']
+            seq_mask = inputs['seq_mask']
+            pix_mask = inputs['pix_mask']
+
             x = x.float().to('cuda')
+            seq_mask = seq_mask.to('cuda')
+            pix_mask = pix_mask.to('cuda')
+
+            x = x * pix_mask * seq_mask.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
+
             #print(f'N datra {i*x.shape[0]}')
 
             x_batched = x.view(-1, *x.shape[-3:])  # batch transforms
 
             z, u, s, probs_x, kl_z, kl_u, neg_logpx_z = model(x_batched)
+
+            if seq_mask is not None:
+                kl_u = kl_u * seq_mask.reshape(x_batched.shape[0], 1, 1, 1)
+                kl_z = kl_z * seq_mask.reshape(x_batched.shape[0], 1, 1, 1)
+        
+            if pix_mask is not None:    
+                neg_logpx_z = neg_logpx_z * pix_mask.reshape_as(x_batched)
 
 
             avg_KLD = (kl_z.sum() + kl_u.sum()) / x_batched.shape[0]
@@ -122,50 +153,70 @@ def eval_epoch(model, val_loader, log, savepath, epoch, n_is_samples=100,
 
     model.eval()
     with torch.no_grad():
-        for x, label in tqdm(val_loader):
+        for inputs, label in tqdm(val_loader):
+
+            x = inputs['data']
+            seq_mask = inputs['seq_mask']
+            pix_mask = inputs['pix_mask']
+
+            x_full = x.float().to('cuda')
+
             x = x.float().to('cuda')
+            seq_mask = seq_mask.to('cuda')
+            pix_mask = pix_mask.to('cuda')
+
+            x = x * pix_mask * seq_mask.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
 
             x_batched = x.view(-1, *x.shape[-3:])  # batch transforms
 
             z, u, s, probs_x, kl_z, kl_u, neg_logpx_z = model(x_batched)
-            avg_KLD = (kl_z.sum() + kl_u.sum()) / x_batched.shape[0]
+
+            neg_logpx_z = (
+                F.mse_loss(
+                    probs_x.reshape(x.shape[0], -1),
+                    x_full.reshape(x.shape[0], -1),
+                    reduction="none",
+                )
+            ).sum(dim=-1)
+
+#            avg_KLD = (kl_z.sum() + kl_u.sum()) / x_batched.shape[0]
             avg_neg_logpx_z = neg_logpx_z.sum() / x_batched.shape[0]
-            eq_loss = all_pairs_equivariance_loss(s, bsz=x.shape[0], seq_len=x.shape[1], 
-                                                  n_caps=model.grouper.n_caps, cap_dim=model.grouper.cap_dim)
-
-            all_s.append(s.cpu().detach())
-            all_x.append(x.cpu().detach())
-            all_labels.append(label.cpu().detach())
-
-            loss = avg_neg_logpx_z + avg_KLD
-            total_loss += loss
+#            eq_loss = all_pairs_equivariance_loss(s, bsz=x.shape[0], seq_len=x.shape[1], 
+#                                                  n_caps=model.grouper.n_caps, cap_dim=model.grouper.cap_dim)
+#
+#            all_s.append(s.cpu().detach())
+#            all_x.append(x.cpu().detach())
+#            all_labels.append(label.cpu().detach())
+#
+#            loss = avg_neg_logpx_z + avg_KLD
+#            total_loss += loss
             total_neg_logpx_z += avg_neg_logpx_z
-            total_kl += avg_KLD
-            total_eq_loss += eq_loss
-            #print("shape", x_batched.shape[0])
-            is_estimate = model.get_IS_estimate(x_batched, n_samples=n_is_samples)
-            total_is_estimate += is_estimate.sum() / x_batched.shape[0]
-
+#            total_kl += avg_KLD
+#            total_eq_loss += eq_loss
+#            #print("shape", x_batched.shape[0])
+#            is_estimate = model.get_IS_estimate(x_batched, n_samples=n_is_samples)
+#            total_is_estimate += is_estimate.sum() / x_batched.shape[0]
+#
             num_batches += 1
-
-            if plot_fullcaptrav and num_batches ==1:# % cap_trav_batches == 0:
-                model.plot_capsule_traversal(x_batched.detach(), 
-                                os.path.join(savepath, 'samples'),
-                                num_batches, wandb_on=wandb_on,
-                                name='Cap_Traversal_Val')
-
-    if plot_cov or plot_maxact or plot_class_selectivity:
-        all_s = torch.cat(all_s, 0)
-        all_x = torch.cat(all_x, 0)
-        all_labels = torch.cat(all_labels, 0)
-    if plot_cov:
-        Plot_Covariance_Matrix(all_s, all_s, name='Covariance_S_Full', wandb_on=wandb_on)
-        Plot_Covariance_Matrix(all_s**2.0, all_s**2.0, name='Covariance_S**2_Full', wandb_on=wandb_on)
-    if plot_maxact:
-        Plot_MaxActImg(all_s, all_x, os.path.join(savepath, 'samples'), epoch, wandb_on=wandb_on)
-    if plot_class_selectivity:
-        Plot_ClassActMap(all_s, all_labels, os.path.join(savepath, 'samples'), epoch, wandb_on=wandb_on)
-
+#
+#            if plot_fullcaptrav and num_batches ==1:# % cap_trav_batches == 0:
+#                model.plot_capsule_traversal(x_batched.detach(), 
+#                                os.path.join(savepath, 'samples'),
+#                                num_batches, wandb_on=wandb_on,
+#                                name='Cap_Traversal_Val')
+#
+#    if plot_cov or plot_maxact or plot_class_selectivity:
+#        all_s = torch.cat(all_s, 0)
+#        all_x = torch.cat(all_x, 0)
+#        all_labels = torch.cat(all_labels, 0)
+#    if plot_cov:
+#        Plot_Covariance_Matrix(all_s, all_s, name='Covariance_S_Full', wandb_on=wandb_on)
+#        Plot_Covariance_Matrix(all_s**2.0, all_s**2.0, name='Covariance_S**2_Full', wandb_on=wandb_on)
+#    if plot_maxact:
+#        Plot_MaxActImg(all_s, all_x, os.path.join(savepath, 'samples'), epoch, wandb_on=wandb_on)
+#    if plot_class_selectivity:
+#        Plot_ClassActMap(all_s, all_labels, os.path.join(savepath, 'samples'), epoch, wandb_on=wandb_on)
+#
     return total_loss, total_neg_logpx_z, total_kl, total_is_estimate, total_eq_loss, num_batches
 
 

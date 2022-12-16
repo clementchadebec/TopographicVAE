@@ -5,6 +5,7 @@ from torch.optim.lr_scheduler import StepLR
 from torch import nn
 from torch.nn import functional as F
 from copy import deepcopy
+import numpy as np
 
 from tvae.data.mnist import Preprocessor
 from tvae.containers.tvae import TVAE
@@ -156,19 +157,25 @@ def main():
         
         torch.save(model.state_dict(), checkpoint_path)
 
+        nll = []
+        
         if e % config['eval_epochs'] == 0:
-            total_loss, total_neg_logpx_z, total_kl, total_is_estimate, total_eq_loss, num_batches = eval_epoch(best_model, test_loader, log, savepath, e, 
+            for _ in range(5):
+                total_loss, total_neg_logpx_z, total_kl, total_is_estimate, total_eq_loss, num_batches = eval_epoch(best_model, test_loader, log, savepath, e, 
                                                                                                                 n_is_samples=config['n_is_samples'],
                                                                                                                 plot_maxact=False, 
                                                                                                                 plot_class_selectivity=False,
                                                                                                                 plot_cov=False,
                                                                                                                 wandb_on=config['wandb_on'])
-            log("Val Avg Loss", total_loss / num_batches)
-            log("Val Avg -LogP(x|z)", total_neg_logpx_z / num_batches)
-            log("Val Avg KL", total_kl / num_batches)
-            log("Val IS Estiamte", total_is_estimate / num_batches)
-            log("Val EQ Loss", total_eq_loss / num_batches)
+                log("Val Avg Loss", total_loss / num_batches)
+                log("Val Avg -LogP(x|z)", total_neg_logpx_z / num_batches)
+                log("Val Avg KL", total_kl / num_batches)
+                log("Val IS Estiamte", total_is_estimate / num_batches)
+                log("Val EQ Loss", total_eq_loss / num_batches)
+                nll.append((total_is_estimate / num_batches).item())
 
+            log("mean IS Estimate", np.mean(nll))
+            log("std IS Estimate", np.std(nll))
 
 if __name__ == '__main__':
     main()
