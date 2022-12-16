@@ -82,9 +82,9 @@ def main():
     #preprocessor = Preprocessor(config)
     #train_loader, val_loader, test_loader = preprocessor.get_dataloaders(batch_size=config['batch_size'])
 
-    data_train = DynBinarizedMNIST(torch.load(os.path.join('/home/clement/Documents/rvae/benchmark_VAE/examples/data/sprites/Sprites_train_torch_131.pt'), map_location="cpu")['data'][:-1000])#[:10000]
-    data_val = DynBinarizedMNIST(torch.load(os.path.join('/home/clement/Documents/rvae/benchmark_VAE/examples/data/sprites/Sprites_train_torch_131.pt'), map_location="cpu")['data'][-1000:])#[:5000]
-    data_test = DynBinarizedMNIST(torch.load(os.path.join('/home/clement/Documents/rvae/benchmark_VAE/examples/data/sprites/Sprites_test_torch_131.pt'), map_location="cpu")['data'])
+    data_train = DynBinarizedMNIST(torch.load(os.path.join('/gpfswork/rech/wlr/uhw48em/rvae/data/sprites/Sprites_train_torch_131.pt'), map_location="cpu")['data'][:-1000])#[:10000]
+    data_val = DynBinarizedMNIST(torch.load(os.path.join('/gpfswork/rech/wlr/uhw48em/rvae/data/sprites/Sprites_train_torch_131.pt'), map_location="cpu")['data'][-1000:])#[:5000]
+    data_test = DynBinarizedMNIST(torch.load(os.path.join('/gpfswork/rech/wlr/uhw48em/rvae/data/sprites/Sprites_test_torch_131.pt'), map_location="cpu")['data'])
 
     train_loader = torch.utils.data.DataLoader(data_train, batch_size=config['batch_size'], 
                                 #sampler=self.train_sampler,

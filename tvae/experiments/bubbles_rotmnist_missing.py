@@ -99,9 +99,9 @@ def main(args):
 
     ####################### Load data #######################
 
-    train_data = torch.load(os.path.join('/home/clement/Documents/rvae/benchmark_VAE/examples/data/rotated_mnist/train_mnist_rotated_8_torch_131.pt'), map_location="cpu")[:-1000]
-    eval_data = torch.load(os.path.join('/home/clement/Documents/rvae/benchmark_VAE/examples/data/rotated_mnist/train_mnist_rotated_8_torch_131.pt'), map_location="cpu")[-1000:]
-    test_data = torch.load(os.path.join('/home/clement/Documents/rvae/benchmark_VAE/examples/data/rotated_mnist/test_mnist_rotated_8_torch_131.pt'), map_location="cpu")
+    train_data = torch.load(os.path.join('/gpfswork/rech/wlr/uhw48em/rvae/data/rotated_mnist/train_mnist_rotated_8_torch_131.pt'), map_location="cpu")[:-1000]
+    eval_data = torch.load(os.path.join('/gpfswork/rech/wlr/uhw48em/rvae/data/rotated_mnist/train_mnist_rotated_8_torch_131.pt'), map_location="cpu")[-1000:]
+    test_data = torch.load(os.path.join('/gpfswork/rech/wlr/uhw48em/rvae/data/rotated_mnist/test_mnist_rotated_8_torch_131.pt'), map_location="cpu")
 
     if config["prob_missing_data"] > 0.:
         train_seq_mask = make_batched_masks(train_data, config["prob_missing_data"], config["batch_size"]).type(torch.bool)

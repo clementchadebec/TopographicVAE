@@ -99,9 +99,9 @@ def main(args):
     
     ####################### Load data #######################
 
-    train_data = torch.load(os.path.join('/home/clement/Documents/rvae/benchmark_VAE/examples/data/starmen/starmen_1000_torch_131.pt'), map_location="cpu")[:700]
-    eval_data = torch.load(os.path.join('/home/clement/Documents/rvae/benchmark_VAE/examples/data/starmen/starmen_1000_torch_131.pt'), map_location="cpu")[700:900]
-    test_data = torch.load(os.path.join('/home/clement/Documents/rvae/benchmark_VAE/examples/data/starmen/starmen_1000_torch_131.pt'), map_location="cpu")[:900]
+    train_data = torch.load(os.path.join('/gpfswork/rech/wlr/uhw48em/rvae/data/starmen/starmen_1000_torch_131.pt'), map_location="cpu")[:700]
+    eval_data = torch.load(os.path.join('/gpfswork/rech/wlr/uhw48em/rvae/data/starmen/starmen_1000_torch_131.pt'), map_location="cpu")[700:900]
+    test_data = torch.load(os.path.join('/gpfswork/rech/wlr/uhw48em/rvae/data/starmen/starmen_1000_torch_131.pt'), map_location="cpu")[:900]
 
     if config["prob_missing_data"] > 0.:
         train_seq_mask = make_batched_masks(train_data, config["prob_missing_data"], config["batch_size"]).type(torch.bool)
