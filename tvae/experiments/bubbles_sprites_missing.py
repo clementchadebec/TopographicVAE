@@ -212,7 +212,7 @@ def main(args):
             #log("mean IS Estimate", np.mean(nll))
             #log("std IS Estimate", np.std(nll))
             log("mean recon loss: ", np.mean(recon))
-            log("std recon loss: ", np.std(recon))y
+            log("std recon loss: ", np.std(recon))
 
 if __name__ == '__main__':
     main()

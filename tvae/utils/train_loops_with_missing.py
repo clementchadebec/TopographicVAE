@@ -140,6 +140,7 @@ def eval_epoch(model, val_loader, log, savepath, epoch, n_is_samples=100,
     total_loss = 0
     total_kl = 0
     total_neg_logpx_z = 0
+    missing_neg_logpx_z = 0
     total_is_estimate = 0.0
     total_eq_loss = 0.0
     num_batches = 0
@@ -175,8 +176,32 @@ def eval_epoch(model, val_loader, log, savepath, epoch, n_is_samples=100,
                 )
             ).sum(dim=-1)
 
+            # mse of missing pixels in seen images 
+            rec_loss_pix = (
+                F.mse_loss(
+                    probs_x.reshape(x_batched.shape[0], -1),
+                    x_full.reshape_as(x_batched.shape[0], -1),
+                    reduction="none"
+                ) * (1-inputs['pix_mask']).reshape(x_batched.shape[0], -1)
+            ).sum(dim=-1)
+
+            rec_loss_pix = (rec_loss_pix.reshape(inputs['data'].shape[0], -1) * inputs['seq_mask']).mean(dim=-1)
+
+            # mse of missing images in sequences
+            rec_loss_seq = (
+                F.mse_loss(
+                    probs_x.reshape(x_batched.shape[0], -1),
+                    x_full.reshape_as(x_batched.shape[0], -1),
+                    reduction="none"
+                )
+            ).sum(dim=-1)
+
+            rec_loss_seq = (rec_loss_seq.reshape(inputs['data'].shape[0], -1) * (1 - inputs['seq_mask'])).mean(dim=-1)
+
+
 #            avg_KLD = (kl_z.sum() + kl_u.sum()) / x_batched.shape[0]
             avg_neg_logpx_z = neg_logpx_z.sum() / x_batched.shape[0]
+            avg_missing_neg_lodpx_z = (rec_loss_seq + rec_loss_pix).sum() / x_batched.shape[0]
 #            eq_loss = all_pairs_equivariance_loss(s, bsz=x.shape[0], seq_len=x.shape[1], 
 #                                                  n_caps=model.grouper.n_caps, cap_dim=model.grouper.cap_dim)
 #
@@ -187,6 +212,7 @@ def eval_epoch(model, val_loader, log, savepath, epoch, n_is_samples=100,
 #            loss = avg_neg_logpx_z + avg_KLD
 #            total_loss += loss
             total_neg_logpx_z += avg_neg_logpx_z
+            missing_neg_logpx_z += avg_missing_neg_lodpx_z
 #            total_kl += avg_KLD
 #            total_eq_loss += eq_loss
 #            #print("shape", x_batched.shape[0])
@@ -213,7 +239,7 @@ def eval_epoch(model, val_loader, log, savepath, epoch, n_is_samples=100,
 #    if plot_class_selectivity:
 #        Plot_ClassActMap(all_s, all_labels, os.path.join(savepath, 'samples'), epoch, wandb_on=wandb_on)
 #
-    return total_loss, total_neg_logpx_z, total_kl, total_is_estimate, total_eq_loss, num_batches
+    return total_loss, total_neg_logpx_z, missing_neg_logpx_z, total_kl, total_is_estimate, total_eq_loss, num_batches
 
 
 

@@ -78,7 +78,7 @@ def main():
         'n_transforms': 12,
         'mu_init': 30.0,
         'n_off_diag': 1,
-        'group_size': 3,
+        'group_kernel': (1, 3, 1),
         'n_is_samples': 100
         }
 

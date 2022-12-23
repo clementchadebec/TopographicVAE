@@ -72,8 +72,8 @@ def main(args):
         'lr': 1e-3,
         #'momentum': 0.9,
         'batch_size': 128,
-        'max_epochs': 200,
-        'eval_epochs': 200,
+        'max_epochs': 1,
+        'eval_epochs': 1,
         #'dataset': 'DSprites',
         #'seq_transforms': ['posX', 'posY', 'orientation', 'scale'],
         #'avail_transforms': ['posX', 'posY', 'orientation', 'scale', 'shape'],
@@ -192,10 +192,11 @@ def main(args):
         torch.save(model.state_dict(), checkpoint_path)
 
         recon = []
+        recon_missing = []
         
         if e % config['eval_epochs'] == 0:
             for _ in range(5):
-                total_loss, total_neg_logpx_z, total_kl, total_is_estimate, total_eq_loss, num_batches = eval_epoch(best_model, test_loader, log, savepath, e, 
+                total_loss, total_neg_logpx_z, missing_neg_logpx_z, total_kl, total_is_estimate, total_eq_loss, num_batches = eval_epoch(best_model, test_loader, log, savepath, e, 
                                                                                                                 n_is_samples=config['n_is_samples'],
                                                                                                                 plot_maxact=False, 
                                                                                                                 plot_class_selectivity=False,

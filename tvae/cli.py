@@ -17,7 +17,8 @@ from tvae.experiments import (
 
     tvae_L0_rotmnist_missing, tvae_Lhalf_rotmnist_missing, tvae_Lpartial_rotmnist_missing, tvae_Lshort_rotmnist_missing,
     tvae_L0_sprites_missing, tvae_Lhalf_sprites_missing, tvae_Lpartial_sprites_missing, tvae_Lshort_sprites_missing,
-    tvae_L0_starmen_missing, tvae_Lpartial_starmen_missing, tvae_Lhalf_starmen_missing, tvae_Lshort_starmen_missing
+    tvae_L0_starmen_missing, tvae_Lpartial_starmen_missing, tvae_Lhalf_starmen_missing, tvae_Lshort_starmen_missing,
+    bubbles_rotmnist_missing, bubbles_sprites_missing, bubbles_starmen_missing
 )
 
 parser = argparse.ArgumentParser(description='')
