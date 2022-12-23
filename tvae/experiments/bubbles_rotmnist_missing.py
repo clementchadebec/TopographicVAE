@@ -72,8 +72,8 @@ def main(args):
         'lr': 1e-3,
         #'momentum': 0.9,
         'batch_size': 128,
-        'max_epochs': 1,
-        'eval_epochs': 1,
+        'max_epochs': 200,
+        'eval_epochs': 200,
         #'dataset': 'DSprites',
         #'seq_transforms': ['posX', 'posY', 'orientation', 'scale'],
         #'avail_transforms': ['posX', 'posY', 'orientation', 'scale', 'shape'],
@@ -209,11 +209,14 @@ def main(args):
                 log("Val EQ Loss", total_eq_loss / num_batches)
                 #nll.append((total_is_estimate / num_batches).item())
                 recon.append((total_neg_logpx_z / num_batches).item())
+                recon_missing.append((missing_neg_logpx_z / num_batches).item())
 
             #log("mean IS Estimate", np.mean(nll))
             #log("std IS Estimate", np.std(nll))
             log("mean recon loss: ", np.mean(recon))
             log("std recon loss: ", np.std(recon))
+            log("mean missing recon loss: ", np.mean(recon_missing))
+            log("std missing recon loss: ", np.std(recon_missing))
 
 if __name__ == '__main__':
     main()

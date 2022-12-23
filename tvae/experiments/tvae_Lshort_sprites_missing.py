@@ -197,10 +197,11 @@ def main(args):
         torch.save(model.state_dict(), checkpoint_path)
 
         recon = []
+        recon_missing = []
         
         if e % config['eval_epochs'] == 0:
             for _ in range(5):
-                total_loss, total_neg_logpx_z, total_kl, total_is_estimate, total_eq_loss, num_batches = eval_epoch(best_model, test_loader, log, savepath, e, 
+                total_loss, total_neg_logpx_z, missing_neg_logpx_z, total_kl, total_is_estimate, total_eq_loss, num_batches = eval_epoch(best_model, test_loader, log, savepath, e, 
                                                                                                                 n_is_samples=config['n_is_samples'],
                                                                                                                 plot_maxact=False, 
                                                                                                                 plot_class_selectivity=False,
@@ -213,11 +214,13 @@ def main(args):
                 log("Val EQ Loss", total_eq_loss / num_batches)
                 #nll.append((total_is_estimate / num_batches).item())
                 recon.append((total_neg_logpx_z / num_batches).item())
+                recon_missing.append((missing_neg_logpx_z / num_batches).item())
 
             #log("mean IS Estimate", np.mean(nll))
             #log("std IS Estimate", np.std(nll))
             log("mean recon loss: ", np.mean(recon))
             log("std recon loss: ", np.std(recon))
-
+            log("mean missing recon loss: ", np.mean(recon_missing))
+            log("std missing recon loss: ", np.std(recon_missing))
 if __name__ == '__main__':
     main()
