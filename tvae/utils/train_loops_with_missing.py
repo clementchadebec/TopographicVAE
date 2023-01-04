@@ -185,7 +185,7 @@ def eval_epoch(model, val_loader, log, savepath, epoch, n_is_samples=100,
                 ) * (1-pix_mask).reshape(x_batched.shape[0], -1)
             ).sum(dim=-1)
 
-            rec_loss_pix = (rec_loss_pix.reshape(inputs['data'].shape[0], -1) * seq_mask).mean(dim=-1)
+            rec_loss_pix = (rec_loss_pix.reshape(inputs['data'].shape[0], -1) * seq_mask).sum(dim=-1)
 
             # mse of missing images in sequences
             rec_loss_seq = (
@@ -196,11 +196,15 @@ def eval_epoch(model, val_loader, log, savepath, epoch, n_is_samples=100,
                 )
             ).sum(dim=-1)
 
-            rec_loss_seq = (rec_loss_seq.reshape(inputs['data'].shape[0], -1) * (1 - seq_mask)).mean(dim=-1)
+            rec_loss_seq = (rec_loss_seq.reshape(inputs['data'].shape[0], -1) * (1 - seq_mask)).sum(dim=-1)
             
+            total_miss = (1 - pix_mask * seq_mask.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)).sum()
+
+            print(total_miss)
+
 #            avg_KLD = (kl_z.sum() + kl_u.sum()) / x_batched.shape[0]
             avg_neg_logpx_z = neg_logpx_z.sum() / x_batched.shape[0]
-            avg_missing_neg_lodpx_z = (rec_loss_seq + rec_loss_pix).sum() / inputs['data'].shape[0]
+            avg_missing_neg_lodpx_z = (rec_loss_seq + rec_loss_pix).sum() / total_miss.item()
 #            eq_loss = all_pairs_equivariance_loss(s, bsz=x.shape[0], seq_len=x.shape[1], 
 #                                                  n_caps=model.grouper.n_caps, cap_dim=model.grouper.cap_dim)
 #

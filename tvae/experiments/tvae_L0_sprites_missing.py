@@ -103,29 +103,28 @@ def main(args):
     train_data = torch.load(os.path.join('/gpfswork/rech/wlr/uhw48em/rvae/data/sprites/Sprites_train_torch_131.pt'), map_location="cpu")['data'][:-1000]
     eval_data = torch.load(os.path.join('/gpfswork/rech/wlr/uhw48em/rvae/data/sprites/Sprites_train_torch_131.pt'), map_location="cpu")['data'][-1000:]
     test_data = torch.load(os.path.join('/gpfswork/rech/wlr/uhw48em/rvae/data/sprites/Sprites_test_torch_131.pt'), map_location="cpu")['data']
-    if config["prob_missing_data"] > 0.:
-        train_seq_mask = make_batched_masks(train_data, config["prob_missing_data"], config["batch_size"]).type(torch.bool)
-        eval_seq_mask = make_batched_masks(eval_data, config["prob_missing_data"], config["batch_size"]).type(torch.bool)
-        test_seq_mask = make_batched_masks(test_data, config["prob_missing_data"], config["batch_size"]).type(torch.bool)
+    #if args.prob_missing_data > 0.:
 
-        print(f'\nPercentage of missing data in train: {1 - train_seq_mask.sum() / np.prod(train_seq_mask.shape)} (target: {config["prob_missing_data"]})')
-        print(f'Percentage of missing data in eval: {1 - eval_seq_mask.sum() / np.prod(eval_seq_mask.shape)} (target: {config["prob_missing_data"]})')
-        print(f'Percentage of missing data in test: {1 - test_seq_mask.sum() / np.prod(test_seq_mask.shape)} (target: {config["prob_missing_data"]})')
+    masks = np.load(f"/home/clement/Documents/rvae/benchmark_VAE/examples/data/sprites/masks/mask_miss_data_{args.prob_missing_data}_miss_pixels_{args.prob_missing_pixels}.npz")
 
-    else:
-        train_seq_mask = torch.ones(train_data.shape[:2], requires_grad=False).type(torch.bool)
-        eval_seq_mask = torch.ones(eval_data.shape[:2], requires_grad=False).type(torch.bool)
-        test_seq_mask = torch.ones(test_data.shape[:2], requires_grad=False).type(torch.bool)
+    train_seq_mask=torch.from_numpy(masks["train_seq_mask"]).type(torch.bool)
+    eval_seq_mask=torch.from_numpy(masks["eval_seq_mask"]).type(torch.bool)
+    test_seq_mask=torch.from_numpy(masks["test_seq_mask"]).type(torch.bool)
+    train_pix_mask=torch.from_numpy(masks["train_pix_mask"]).type(torch.bool)
+    eval_pix_mask=torch.from_numpy(masks["eval_pix_mask"]).type(torch.bool)
+    test_pix_mask=torch.from_numpy(masks["test_pix_mask"]).type(torch.bool)
 
-    if config["prob_missing_pixels"] > 0.:
-        train_pix_mask = torch.distributions.Bernoulli(probs=1-config["prob_missing_pixels"]).sample((train_data.shape[0], train_data.shape[1],)+train_data.shape[-2:]).unsqueeze(2).repeat(1, 1, train_data.shape[2], 1, 1)
-        eval_pix_mask = torch.distributions.Bernoulli(probs=1-config["prob_missing_pixels"]).sample((eval_data.shape[0], eval_data.shape[1],)+eval_data.shape[-2:]).unsqueeze(2).repeat(1, 1, train_data.shape[2], 1, 1)
-        test_pix_mask = torch.distributions.Bernoulli(probs=1-config["prob_missing_pixels"]).sample((test_data.shape[0], test_data.shape[1],)+test_data.shape[-2:]).unsqueeze(2).repeat(1, 1, train_data.shape[2], 1, 1)
+    #train_seq_mask = make_batched_masks(train_data, args.prob_missing_data, args.batch_size).type(torch.bool)
+    #eval_seq_mask = make_batched_masks(eval_data, args.prob_missing_data, args.batch_size).type(torch.bool)
+    #test_seq_mask = make_batched_masks(test_data, args.prob_missing_data, args.batch_size).type(torch.bool)
 
-    else:
-        train_pix_mask = torch.ones_like(train_data, requires_grad=False).type(torch.bool)
-        eval_pix_mask = torch.ones_like(eval_data, requires_grad=False).type(torch.bool)
-        test_pix_mask = torch.ones_like(test_data, requires_grad=False).type(torch.bool)
+    print(f'\nPercentage of missing data in train: {1 - train_seq_mask.sum() / np.prod(train_seq_mask.shape)} (target: {args.prob_missing_data})')
+    print(f'Percentage of missing data in eval: {1 - eval_seq_mask.sum() / np.prod(eval_seq_mask.shape)} (target: {args.prob_missing_data})')
+    print(f'Percentage of missing data in test: {1 - test_seq_mask.sum() / np.prod(test_seq_mask.shape)} (target: {args.prob_missing_data})')
+    
+    print(f'\nPercentage of missing pixels in train: {1 - train_pix_mask.sum() / np.prod(train_pix_mask.shape)} (target: {args.prob_missing_pixels})')
+    print(f'Percentage of missing pixels in eval: {1 - eval_pix_mask.sum() / np.prod(eval_pix_mask.shape)} (target: {args.prob_missing_pixels})')
+    print(f'Percentage of missing pixels in test: {1 - test_pix_mask.sum() / np.prod(test_pix_mask.shape)} (target: {args.prob_missing_pixels})')
 
 
     data_train = My_MaskedDataset(train_data, train_seq_mask, train_pix_mask)

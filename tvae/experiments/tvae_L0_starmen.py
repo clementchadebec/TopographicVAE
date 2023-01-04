@@ -92,7 +92,7 @@ def main():
 
     data_train = DynBinarizedMNIST(torch.load(os.path.join('/gpfswork/rech/wlr/uhw48em/rvae/data/starmen/starmen_1000_torch_131.pt'), map_location="cpu")[:700])#[:10000]
     data_val = DynBinarizedMNIST(torch.load(os.path.join('/gpfswork/rech/wlr/uhw48em/rvae/data/starmen/starmen_1000_torch_131.pt'), map_location="cpu")[700:900])#[:5000]
-    data_test = DynBinarizedMNIST(torch.load(os.path.join('/gpfswork/rech/wlr/uhw48em/rvae/data/starmen/starmen_1000_torch_131.pt'), map_location="cpu")[:900])
+    data_test = DynBinarizedMNIST(torch.load(os.path.join('/gpfswork/rech/wlr/uhw48em/rvae/data/starmen/starmen_1000_torch_131.pt'), map_location="cpu")[900:])
 
     #kwargs = {'num_workers': 1, 'pin_memory': True} if torch.cuda.is_available() else {}
     train_loader = torch.utils.data.DataLoader(data_train, batch_size=config['batch_size'], 
