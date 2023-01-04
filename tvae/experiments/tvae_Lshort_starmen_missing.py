@@ -100,13 +100,13 @@ def main(args):
 
     ####################### Load data #######################
 
-    train_data = torch.load(os.path.join('/home/clement/Documents/rvae/benchmark_VAE/examples/data/starmen/starmen_1000_torch_131.pt'), map_location="cpu")[:700]
-    eval_data = torch.load(os.path.join('/home/clement/Documents/rvae/benchmark_VAE/examples/data/starmen/starmen_1000_torch_131.pt'), map_location="cpu")[700:900]
-    test_data = torch.load(os.path.join('/home/clement/Documents/rvae/benchmark_VAE/examples/data/starmen/starmen_1000_torch_131.pt'), map_location="cpu")[900:]
+    train_data = torch.load(os.path.join('/gpfswork/rech/wlr/uhw48em/rvae/data/starmen/starmen_1000_torch_131.pt'), map_location="cpu")[:700]
+    eval_data = torch.load(os.path.join('/gpfswork/rech/wlr/uhw48em/rvae/data/starmen/starmen_1000_torch_131.pt'), map_location="cpu")[700:900]
+    test_data = torch.load(os.path.join('/gpfswork/rech/wlr/uhw48em/rvae/data/starmen/starmen_1000_torch_131.pt'), map_location="cpu")[900:]
 
     #if args.prob_missing_data > 0.:
 
-    masks = np.load(f"/home/clement/Documents/rvae/benchmark_VAE/examples/data/starmen/masks/mask_miss_data_{args.prob_missing_data}_miss_pixels_{args.prob_missing_pixels}.npz")
+    masks = np.load(f"/gpfswork/rech/wlr/uhw48em/rvae/data/starmen/masks/mask_miss_data_{args.prob_missing_data}_miss_pixels_{args.prob_missing_pixels}.npz")
 
     train_seq_mask=torch.from_numpy(masks["train_seq_mask"]).type(torch.bool)
     eval_seq_mask=torch.from_numpy(masks["eval_seq_mask"]).type(torch.bool)

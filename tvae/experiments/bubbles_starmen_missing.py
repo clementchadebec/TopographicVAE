@@ -105,7 +105,7 @@ def main(args):
 
     #if args.prob_missing_data > 0.:
 
-    masks = np.load(f"/home/clement/Documents/rvae/benchmark_VAE/examples/data/starmen/masks/mask_miss_data_{args.prob_missing_data}_miss_pixels_{args.prob_missing_pixels}.npz")
+    masks = np.load(f"/gpfswork/rech/wlr/uhw48em/rvae/data/starmen/masks/mask_miss_data_{args.prob_missing_data}_miss_pixels_{args.prob_missing_pixels}.npz")
 
     train_seq_mask=torch.from_numpy(masks["train_seq_mask"]).type(torch.bool)
     eval_seq_mask=torch.from_numpy(masks["eval_seq_mask"]).type(torch.bool)

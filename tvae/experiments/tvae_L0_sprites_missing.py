@@ -105,7 +105,7 @@ def main(args):
     test_data = torch.load(os.path.join('/gpfswork/rech/wlr/uhw48em/rvae/data/sprites/Sprites_test_torch_131.pt'), map_location="cpu")['data']
     #if args.prob_missing_data > 0.:
 
-    masks = np.load(f"/home/clement/Documents/rvae/benchmark_VAE/examples/data/sprites/masks/mask_miss_data_{args.prob_missing_data}_miss_pixels_{args.prob_missing_pixels}.npz")
+    masks = np.load(f"/gpfswork/rech/wlr/uhw48em/rvae/data/sprites/masks/mask_miss_data_{args.prob_missing_data}_miss_pixels_{args.prob_missing_pixels}.npz")
 
     train_seq_mask=torch.from_numpy(masks["train_seq_mask"]).type(torch.bool)
     eval_seq_mask=torch.from_numpy(masks["eval_seq_mask"]).type(torch.bool)
