@@ -100,7 +100,7 @@ def main():
     val_loader = torch.utils.data.DataLoader(data_val, batch_size=config['batch_size'], 
                                 #sampler=self.valid_sampler,
                                 shuffle=False, drop_last=False)
-    test_loader = torch.utils.data.DataLoader(data_test, batch_size=config['batch_size'], 
+    test_loader = torch.utils.data.DataLoader(data_test, batch_size=128, 
                                 shuffle=False, drop_last=False)
 
     model = create_model(n_caps=config['n_caps'], cap_dim=config['cap_dim'], mu_init=config['mu_init'], 

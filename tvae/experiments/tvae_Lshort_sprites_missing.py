@@ -141,7 +141,7 @@ def main(args):
                                 shuffle=False,
                                 #drop_last=False
                                 )
-    test_loader = torch.utils.data.DataLoader(data_test, batch_size=config['batch_size'], 
+    test_loader = torch.utils.data.DataLoader(data_test, batch_size=128, 
                                 shuffle=False,
                                 #drop_last=False
                                 )
