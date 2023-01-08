@@ -14,7 +14,7 @@ from tvae.containers.encoder import Gaussian_Encoder
 from tvae.containers.decoder import Bernoulli_Decoder, Gaussian_Decoder
 from tvae.containers.grouper import Chi_Squared_Capsules_from_Gaussian_1d
 from tvae.utils.logging import configure_logging, get_dirs
-from tvae.utils.train_loops import train_epoch, eval_epoch, validate_epoch
+from tvae.utils.train_loops_with_missing import train_epoch, eval_epoch, validate_epoch
 
 class My_MaskedDataset(torch.utils.data.Dataset):
     def __init__(self, data, seq_mask, pix_mask):
